@@ -1,0 +1,606 @@
+class VAnnouncementBar extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.text = '🎁 Your Discount has been applied! (preview)';
+    this.render();
+  }
+
+  show(text, duration) {
+    if (this.timer) clearTimeout(this.timer)
+    this.text = text;
+    this.setAttribute('class', 'show');
+
+    this.timer = setTimeout(() => {
+      this.removeAttribute('class')
+    }, duration);
+
+    this.render();
+  }
+
+  render() {
+    const color = this.getAttribute('color') || '#fff';
+    const background = this.getAttribute('background') || '#000'
+    this.shadowRoot.innerHTML = `
+            <style>
+                :host {
+                    background-color: ${background};
+                    color: ${color};
+                    padding: 15px;
+                    text-align: center;
+                    position: fixed;
+                    top: 0;
+                    z-index: 2147483647;
+                    width: 100%;
+                    max-width: 100%;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                    transform: translateY(-100%);
+                    transition: transform 0.5s ease-in-out;
+                }
+                :host(.show){
+                    transform: translateY(0);
+                }
+                span{
+                    color:${color};
+                    font-size:16px;
+                    line-height: 20px; 
+                }
+                button{
+                    border:0;
+                    color:${background};
+                    cursor:pointer;
+                    font-size:12px;
+                    padding:2px 8px;
+                    margin-left:10px;
+                    border-radius:2px;
+                    background-color:${color}
+                }
+            </style>
+            <span>${this.text}</span>
+            <button type="button">Close</button>
+        `;
+    this.shadowRoot.querySelector('button').addEventListener('click', () => {
+      this.removeAttribute('class');
+      if (this.timer) clearTimeout(this.timer)
+    });
+  }
+}
+
+
+customElements.define("veeper-announcement", VAnnouncementBar);
+
+class VCountDown extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.setDisplay = this.setDisplay.bind(this);
+  }
+
+  $(s) { return this.shadowRoot.querySelector(s) }
+  connectedCallback() { this.render() }
+
+  render() {
+    const color = this.getAttribute('color') || '#fff';
+    const background = this.getAttribute('background') || '#000';
+    const max_width = this.getAttribute('max') || '440';
+
+    this.shadowRoot.innerHTML = `
+            <style>
+                :host {
+                    width: 100%;
+                    padding: 8px !important;
+                    max-width: ${max_width}px;
+                    display: none;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                    background: ${background};
+                    color: ${color};
+                    border-radius: 4px;
+                    margin: 4px 0;
+                }
+                :host(*) {
+                    box-sizing: border-box;
+                  
+                }
+                .text {
+                    margin: 0;
+                    font-size: 16px;
+                    line-height: 20px;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: center;
+                    color: ${color};
+                }
+                    .text span:first-child{
+                      font-size: 32px;
+                      padding-right: 4px;
+                    } 
+                .timer {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 12px;
+                    color: ${color};
+                }
+                .item {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 0px;
+                }
+                .item p {
+                    font-size: 24px;
+                    line-height: 1;
+                    margin: 0;
+                    color: ${color};
+                }
+                .item small {
+                    font-size: 12px;
+                    color: ${color};
+                }
+            </style>
+            <p class="text">
+            <span>🔥</span>
+            <span> Hurry Up! Offer Ends In</span>
+            </p>
+            <div class="timer">
+                <div class="item" id="days"><p>00</p><small>Days</small></div>
+                <div class="item" id="hours"><p>00</p><small>Hours</small></div>
+                <div class="item" id="minutes"><p>00</p><small>Mins</small></div>
+                <div class="item" id="seconds"><p>00</p><small>Secs</small></div>
+            </div>
+        `;
+  }
+
+  setDisplay(value) {
+    this.style.display = value;
+  }
+
+  show(message, timestamp) {
+    const target = new Date(timestamp).getTime();
+
+    // Clear any existing interval
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const distance = target - now;
+
+      if (distance < 0) {
+        clearInterval(this.interval);
+        this.setDisplay('none');
+        return;
+      }
+
+      this.setDisplay('flex');
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      this.$('.text').textContent = '🔥 ' + message;
+      this.$('#days p').textContent = String(days).padStart(2, '0');
+      this.$('#hours p').textContent = String(hours).padStart(2, '0');
+      this.$('#minutes p').textContent = String(minutes).padStart(2, '0');
+      this.$('#seconds p').textContent = String(seconds).padStart(2, '0');
+    };
+
+    this.interval = setInterval(updateTimer, 1000);
+    updateTimer();
+  }
+
+  disconnectedCallback() {
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+  }
+}
+
+customElements.define("veeper-countdown", VCountDown);
+
+class VFreeGift extends HTMLElement {
+  constructor() {
+    super();
+    this.state = {};
+    this.attachShadow({ mode: 'open' });
+
+    // Bind event handler methods to the class instance
+    this.handleChangeVariant = this.handleChangeVariant.bind(this);
+    this.hanldeClickAddToCart = this.hanldeClickAddToCart.bind(this);
+  }
+
+  static observedAttributes = ['mode', 'preference', 'pid', 'vid'];
+
+  qs(s) {
+    let els = this.shadowRoot.querySelectorAll(s);
+    return {
+      elements: () => els ? els : null,
+      element: () => els && els.length > 0 ? els[0] : null,
+      on: (e, c) => { els ? els.forEach(el => el.addEventListener(e, c)) : null; },
+      off: (e, c) => { els ? els.forEach(el => el.removeEventListener(e, c)) : null; }
+    }
+  }
+
+  filter(state) {
+    let cart = state?.cart || {};
+    let { gifts = [], products = [] } = state?.data || {};
+
+    const updateInfo = (items) => {
+      items.forEach((item) => {
+        const { id, price, quantity, inCart } = cart?.[item.id] || {};
+        cart[item.id] = {
+          id: id || item.variants[0].id,
+          quantity: quantity || 1,
+          price: price || item.variants[0].price,
+          inCart: inCart || false,
+        };
+      });
+    };
+
+    updateInfo([...products, ...gifts]);
+    return { ...state, cart };
+  }
+
+  useState(initialValue) {
+    if (this.state === undefined) {
+      this.state = initialValue;
+    }
+
+    const setState = (newValue) => {
+      this.state = this.filter(newValue)
+      this.render()
+    }
+
+    return [this.state, setState];
+  }
+
+  async addToCart(type, items) {
+    const [state, setState] = this.useState({});
+    const { pid, vid, cart } = this.state;
+
+    // if (!cart?.[pid] || !cart[pid].isInCart) {
+    //   items[pid] = `${vid}`;
+    // }
+
+    let formData = {
+      items: Object.keys(items).map(key => ({
+        id: Number(items[key]),
+        quantity: 1,
+        ...(type === 'gift' && { _free_gift: true })
+      }))
+    };
+
+    setState({ ...state, loading: type });
+    try {
+      const request = {
+        method: 'POST',
+        body: JSON.stringify(formData),
+        headers: { 'Content-Type': 'application/json' },
+      }
+
+      const response = await fetch(window.Shopify.routes.root + 'cart/add.js', request);
+      const jsondata = await response.json();
+      setState({ ...state, loading: false })
+    } catch (error) {
+      console.error('Error:', error);
+      setState({ ...state, loading: false })
+    }
+  }
+
+  async hanldeClickAddToCart(e) {
+    const { id } = e.target;
+    const items = {};
+    const selectEls = this.qs(`.${id} select`).elements();
+
+    selectEls.forEach((el) => {
+      let isInCart = el.getAttribute('data-cart');
+      if (isInCart === 'false') items[el.id] = el.value
+    });
+
+    if (Object.keys(items).length === 0) return;
+    await this.addToCart(id, items);
+  }
+
+  handleChangeVariant(e) {
+    const [state, setState] = this.useState({});
+    const cart = state?.cart || {};
+
+    const { id, value } = e.target;
+    const index = e.target.selectedIndex;
+    const selectedOption = e.target.options[index];
+    const price = selectedOption.getAttribute('price');
+
+    cart[id] = { ...cart[id], id: value, price };
+    setState({ ...state, cart });
+  }
+
+  connectedCallback() {
+    // Initialize
+    this.render();
+  }
+
+  disconnectedCallback() {
+    this.state = {};
+    this.shadowRoot.innerHTML = '';
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    let data = {};
+
+    try { data = JSON.parse(newValue) }
+    catch (error) {  }
+
+    const [state, setState] = this.useState({});
+    if (oldValue !== newValue) {
+      setState({ ...state, [name]: data });
+    }
+  }
+
+  render() {
+    const pid = this.state?.pid || '';
+    const vid = this.state?.vid || '';
+    const data = this.state?.data || {}
+    const cart = this.state?.cart || {};
+    const loading = this.state?.loading || false;
+    const preference = this.state?.preference || {};
+
+    // check all gift in cart or not
+    const isInCart = cart[pid]?.inCart;
+    let allGiftsInCart = data?.gifts?.every(item => cart[item.id]?.inCart);
+
+    const cssStyle = `
+      .fg {
+				gap: 12px;
+				width: 100%;
+				padding: 12px;
+				display: flex;
+				flex-direction: column;
+				align-items: flex-start;
+				justify-content: flex-start;
+				border: 1px solid ${preference?.['border-color'] || '#ddd'};
+				border-radius: ${preference?.['border-radius'] || '12'}px;
+				box-sizing: border-box;
+				max-width: ${preference?.['max-width'] || '438'}px;
+			}
+		
+			.fg *, .fg *::before, .fg *::after {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+				color: ${preference?.['text-color'] || '#000000'}
+			}
+		
+			.f1 { flex: 1}
+		
+			.row {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+			}
+		
+			.col {
+				display: flex;
+				flex-direction: column;
+				align-items: flex-start;
+				justify-content: flex-start;
+			}
+		
+			.jcs { justify-content: flex-start}
+			.ais { align-items: flex-start}
+		
+			.g12 { gap: 12px}
+			.g8  { gap: 8px}
+			.g4  { gap: 4px}
+		
+			.btn, .sel {
+				border: none;
+				outline: none;
+				font-size: 16px;
+				font-weight: 500;
+				box-shadow: none;
+				border-radius: 4px;
+				padding: 8px 12px;
+			}
+		
+			.btn {
+				height: 40px;
+				color: ${preference?.['button-color'] || '#ffffff'};
+				cursor: pointer;
+				background: ${preference?.['button-background'] || '#000000'};
+			}
+		
+			.sel {
+				color: #000;
+				height: 36px;
+				background: #fff;
+				border: 1px solid ${preference?.['border-color'] || '#ddd'};
+			}
+
+      .btn:disabled {
+        cursor: not-allowed;
+      }
+		
+			.wf  { width: 100%}
+			.w40 { width: 40px}
+			.w72 { width: 72px}
+			.h40 {height: 40px}
+		
+			.oh{ overflow: hidden}
+		
+			.av {
+				width: 40px;
+				height: 40px;
+				display: block;
+				background: #ddd;
+				border-radius: 4px;
+			}
+
+      SVG{
+        position: absolute;
+        left: 32px;
+        top: 32px
+      }
+		
+			h6 {
+				font-size: 18px;
+				font-weight: 500;
+				line-height: 24px;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+			}
+		
+			p {
+				font-size: 16px;
+				font-weight: 400;
+				line-height: 22px;
+			}
+		
+			.f600 {font-weight: 600 }
+			.cg   {color: ${preference?.['discount-color']} }
+			.s    {text-decoration: line-through;}
+		
+			.hr {
+				width: 100%;
+				height: 1px;
+				background: ${preference?.['border-color'] || '#ddd'};
+			}
+      .spinner {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+      }
+      .spinner > div {
+        animation: sk-bouncedelay 1.2s infinite ease-in-out both;
+        border-radius: 100%;
+        display: inline-block;
+        height: 0.4em;
+        margin: 0 0.1em;
+        width: 0.4em;
+        background: #fff;
+      }
+      .spinner .bounce1 {
+        animation-delay: -0.32s;
+      }
+      .spinner .bounce2 {
+        animation-delay: -0.16s;
+      }
+      @keyframes sk-bouncedelay {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+        }
+        40% {
+          transform: scale(1);
+        }
+      }
+    
+      @keyframes slideInFromLeft {
+        0% {
+          transform: translateX(60px) translateY(60px);
+        }
+        100% {
+          transform: translateX(0px) translateY(0px);
+        }
+      }
+    `;
+
+    this.shadowRoot.innerHTML = `
+      <style>${cssStyle}</style>
+      ${data?.gifts?.length ? `
+      <div class="fg">
+        ${data?.products?.length === 1000 ? `
+        <div class="col wf">
+          <h6 class="h6 f600">Add following products</h6>
+        </div>
+        <div class="products col wf g12">
+          ${data.products?.map(item => this.template('products', item, cart)).join('')}
+        </div>
+        <button id="products" class="add-products btn wf" ${loading === 'products' ? 'disabled' : ''}>
+          ${loading === 'products' ? this.loading() : `Add Product`}
+        </button>`: ''}
+        ${data?.gifts?.length ? `
+        <div class="col wf">
+          ${isInCart ?
+            allGiftsInCart ? `
+              <h6 class="h6 f600">Free gift added to cart</h6>`: `
+              <h6 class="h6 f600">Select your free gift</h6>`
+            : `<h6 class="h6 f600">Add to cart to get free gift</h6>`
+          }
+        </div>
+        <div class="gifts col wf g12">
+          ${data?.gifts?.map(item => this.template('gifts', item, cart)).join('')}
+        </div>
+        ${!allGiftsInCart ? `
+        <button id="gifts" class="add-gifts btn wf" ${!isInCart ? 'disabled' : ''}>
+          ${loading === 'gifts' ? this.loading() : 'Add Free Gift'}
+        </button>
+        `: ''}
+        `: ''}
+      </div>`: ''}
+    `;
+
+    this.qs('.gifts select').on('change', this.handleChangeVariant);
+    this.qs('.products select').on('change', this.handleChangeVariant);
+    this.qs('.add-gifts').on('click', this.hanldeClickAddToCart);
+    this.qs('.add-products').on('click', this.hanldeClickAddToCart);
+  }
+
+  loading() {
+    return `
+      <div class="spinner">
+        <div class="bounce1"></div>
+        <div class="bounce2"></div>
+        <div class="bounce3"></div>
+      </div>
+    `;
+  }
+
+  template(type, product = {}, cart = {}) {
+    const pid = product.id;
+    const sid = cart[pid]?.id;
+    const price = cart[pid]?.price;
+    const isInCart = cart[pid]?.inCart;
+    const variants = product?.variants || [];
+    const singleVariant = variants?.length === 1;
+
+    return `
+      <div class="row hr"></div>
+      <div class="col wf g4">
+        <div class="row wf jcs ais g8" style="position: relative">
+          ${isInCart ? `
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="12" fill="#27936F"/>
+            <path d="M6 12L10.5 16.5L19 8" stroke="#fff" stroke-width="3"/>
+          </svg>`: ''}
+          <img style="border: 1px solid #ddd" src="${product?.image}" alt="" class="av">
+          <div class="col f1 oh">
+            <h6 class="h6 wf oh">${product?.title}</h6>
+            <p class="p">
+              ${price ? `
+              <span class="cr ${type === 'gifts' ? `s` : ``}">$${Number(price).toFixed(2)}</span>` : `
+              <span class="cr"> $ --- </span> `}
+              ${type === 'gifts' ? `<span class="cg"> $0.00 </span>` : ''}
+            </p>
+          </div>
+        </div>
+        ${variants?.length > 0 && !isInCart ? `
+        <select id="${pid}" data-type="${type}" data-cart="${isInCart}" class="wf sel"  ${singleVariant ? 'disabled' : ''}>
+            ${variants?.map(item => `
+            <option value="${item.id}" price="${item.price}" ${item?.id === sid ? 'selected' : ''}>
+              ${item.title}
+            </option>`).join('')}
+        </select>` : ''}
+      </div>
+    `;
+  }
+}
+
+customElements.define('free-gift', VFreeGift);
